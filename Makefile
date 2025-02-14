@@ -3,7 +3,7 @@ BIN = $(SRC:.c=.exe)
 
 CC = cl
 LD = link
-CFLAGS = /nologo
+CFLAGS = /nologo /W4 /WX
 LDFLAGS = /nologo
 
 all: $(BIN)
