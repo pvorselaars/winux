@@ -9,121 +9,121 @@
 
 int main(int argc, char *argv[])
 {
-	int sec = 2;
-	char shell[MAX_PATH];
-	
-	if (!GetEnvironmentVariableA("SHELL", shell, MAX_PATH)) {
-		strcpy_s(shell, MAX_PATH, "C:\\Windows\\System32\\cmd.exe");
-	}
+  int sec = 2;
+  char shell[MAX_PATH];
 
-	char *cmd = NULL;
-	char cmdline[MAX_PATH];
-	int spacing, timelength, datelength, cmdlength, digits = 1;
-	bool timestamp = true;
-	bool quiet = false;
+  if (!GetEnvironmentVariableA("SHELL", shell, MAX_PATH)) {
+    strcpy_s(shell, MAX_PATH, "C:\\Windows\\System32\\cmd.exe");
+  }
 
-	STARTUPINFO si;
-	PROCESS_INFORMATION pi;
-	DWORD exitcode = 0;
+  char *cmd = NULL;
+  char cmdline[MAX_PATH];
+  int spacing, timelength, datelength, cmdlength, digits = 1;
+  bool timestamp = true;
+  bool quiet = false;
 
-	SYSTEMTIME t;
-	wchar_t date[DATE_LENGTH];
-	wchar_t time[TIME_LENGTH];
+  STARTUPINFO si;
+  PROCESS_INFORMATION pi;
+  DWORD exitcode = 0;
 
-	CONSOLE_SCREEN_BUFFER_INFO b;
+  SYSTEMTIME t;
+  wchar_t date[DATE_LENGTH];
+  wchar_t time[TIME_LENGTH];
 
-	if (argc < 2) {
-		printf("Usage: %s [-n SEC] [-t] [-q] PROG\n"
-					 "\n"
-				   "Run PROG periodically\n"
-					 "\n"
-					 "\t-n SEC\tPeriod in seconds (default 2)\n"
-					 "\t-t\tDo not print header\n"
-					 "\t-q\tDo not alert when exit code is not 0\n", argv[0]);
+  CONSOLE_SCREEN_BUFFER_INFO b;
 
-		return EXIT_SUCCESS;
-	}
+  if (argc < 2) {
+    printf("Usage: %s [-n SEC] [-t] [-q] PROG\n"
+           "\n"
+           "Run PROG periodically\n"
+           "\n"
+           "\t-n SEC\tPeriod in seconds (default 2)\n"
+           "\t-t\tDo not print header\n"
+           "\t-q\tDo not alert when exit code is not 0\n", argv[0]);
 
-	for (int a = 1; a < argc; a++) {
+    return ERROR_SUCCESS;
+  }
 
-		// process options
-		if (argv[a][0] == '-') {
+  for (int a = 1; a < argc; a++) {
 
-			switch (argv[a][1]) {
+    // process options
+    if (argv[a][0] == '-') {
 
-				case 'n':
-					if (argv[++a] == NULL)
-						return ERROR_BAD_ARGUMENTS;
+      switch (argv[a][1]) {
 
-					sec = atoi(argv[a]);
-					digits = (int)strlen(argv[a]);
+        case 'n':
+          if (argv[++a] == NULL)
+            return ERROR_BAD_ARGUMENTS;
 
-					if (sec == 0)
-						return ERROR_BAD_ARGUMENTS;
-					continue;
+          sec = atoi(argv[a]);
+          digits = (int)strlen(argv[a]);
 
-				case 't':
-					timestamp = false;
-					continue;
+          if (sec == 0)
+            return ERROR_BAD_ARGUMENTS;
+          continue;
 
-				case 'q':
-					quiet = true;
-					continue;
+        case 't':
+          timestamp = false;
+          continue;
 
-				default:
-					return ERROR_BAD_ARGUMENTS;
-			}
+        case 'q':
+          quiet = true;
+          continue;
 
-		}
+        default:
+          return ERROR_BAD_ARGUMENTS;
+      }
 
-		if (cmd != NULL)
-			return ERROR_BAD_ARGUMENTS;
+    }
 
-		cmd = argv[a];
+    if (cmd != NULL)
+      return ERROR_BAD_ARGUMENTS;
 
-	}
+    cmd = argv[a];
 
-	if (cmd == NULL)
-		return ERROR_BAD_ARGUMENTS;
+  }
 
-	cmdlength = (int)strlen(cmd);
-	snprintf(cmdline, MAX_PATH, "/c %s", cmd);
+  if (cmd == NULL)
+    return ERROR_BAD_ARGUMENTS;
 
-	ZeroMemory(&si, sizeof(si));
-	si.cb = sizeof(si);
-	ZeroMemory(&pi, sizeof(pi));
+  cmdlength = (int)strlen(cmd);
+  snprintf(cmdline, MAX_PATH, "/c %s", cmd);
 
-	HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
-	SetConsoleMode(console, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+  ZeroMemory(&si, sizeof(si));
+  si.cb = sizeof(si);
+  ZeroMemory(&pi, sizeof(pi));
 
-	while (1) {
-		printf("\033[2J\033[H");
+  HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+  SetConsoleMode(console, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
-		if (timestamp) {
-			GetLocalTime(&t);
-			datelength = GetDateFormatEx(LOCALE_NAME_USER_DEFAULT, DATE_LONGDATE, &t, NULL, date, DATE_LENGTH, NULL);
-			timelength = GetTimeFormatEx(LOCALE_NAME_INVARIANT, 0, &t, NULL, time, TIME_LENGTH);
+  while (1) {
+    printf("\033[2J\033[H");
 
-			GetConsoleScreenBufferInfo(console, &b);
-			spacing = b.dwSize.X - digits - cmdlength - timelength - datelength;
+    if (timestamp) {
+      GetLocalTime(&t);
+      datelength = GetDateFormatEx(LOCALE_NAME_USER_DEFAULT, DATE_LONGDATE, &t, NULL, date, DATE_LENGTH, NULL);
+      timelength = GetTimeFormatEx(LOCALE_NAME_INVARIANT, 0, &t, NULL, time, TIME_LENGTH);
 
-			printf("Every %ds: %s%*ls %ls\n\n", sec, cmd, spacing, time, date);
-		}
+      GetConsoleScreenBufferInfo(console, &b);
+      spacing = b.dwSize.X - digits - cmdlength - timelength - datelength;
 
-		if(!CreateProcess(shell, cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
-			return GetLastError();
+      printf("Every %ds: %s%*ls %ls\n\n", sec, cmd, spacing, time, date);
+    }
 
-		WaitForSingleObject(pi.hProcess, INFINITE);
-		GetExitCodeProcess(pi.hProcess, &exitcode);
+    if(!CreateProcess(shell, cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+      return GetLastError();
 
-		if (exitcode && !quiet)
-			printf("\a");
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    GetExitCodeProcess(pi.hProcess, &exitcode);
 
-		CloseHandle(pi.hProcess);
-		CloseHandle(pi.hThread);
-		Sleep(sec*1000);
-	}
+    if (exitcode && !quiet)
+      printf("\a");
 
-	free(date);
-	return 0;
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    Sleep(sec*1000);
+  }
+
+  free(date);
+  return 0;
 }
