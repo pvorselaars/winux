@@ -124,6 +124,5 @@ int main(int argc, char *argv[])
     Sleep(sec*1000);
   }
 
-  free(date);
   return 0;
 }
