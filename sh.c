@@ -134,5 +134,5 @@ int main(int argc, char *argv[])
   } while (!exit);
 
 
-  return 0;
+  return exitcode;
 }
