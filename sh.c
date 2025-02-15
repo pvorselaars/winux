@@ -90,14 +90,8 @@ int main(int argc, char *argv[])
           while (buffer[v] != 0 || buffer[v] == ' '){ v++; };
           buffer[v] = 0;
 
-          int r = GetEnvironmentVariableA(&buffer[b], &cmdline[c], MAX_PATH - c);
-
-          if (r) {
-            c += r - 1;
-          }
-
+          c += GetEnvironmentVariableA(&buffer[b], &cmdline[c], MAX_PATH - c);
           b += v + 1;
-        
 
         } else {
           cmdline[c] = buffer[b];
