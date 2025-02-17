@@ -25,22 +25,11 @@ size_t terminate(char *buffer)
     return len;
 }
 
-char *lex(char *line)
-{
-  char *token = line;
-
-  while(*line++ != ' ');
-
-  *line = 0;
-
-  return token;
-}
-
 void expand(char *line, char *token)
 {
   if (*token != '$') {
-      sprintf_s(line, MAX_PATH - strlen(line), "%s%s", line, token);
-      return;
+    sprintf_s(line, MAX_PATH - strlen(line), "%s %s", line, token);
+    return;
   }
 
   if (*(++token) == '?') {
@@ -48,10 +37,8 @@ void expand(char *line, char *token)
     return;
   }
 
-  if(GetEnvironmentVariableA(token, line, MAX_PATH - (DWORD)strlen(line)))
+  if(GetEnvironmentVariableA(token, line + strlen(line), MAX_PATH - (DWORD)strlen(line)))
     return;
-
-  line[0] = 0;
 
 }
 
@@ -61,6 +48,7 @@ int main(int argc, char *argv[])
   bool exit = false;
   char buffer[MAX_PATH];
   char cmdline[MAX_PATH];
+  char *line = cmdline;
 
   STARTUPINFO si;
   PROCESS_INFORMATION pi;
@@ -103,10 +91,10 @@ int main(int argc, char *argv[])
   si.cb = sizeof(si);
   memset(&pi, 0, sizeof(pi));
 
-  cmdline[0] = 0;
+  line[0] = 0;
   for (int a = cmd; a < argc; a++) {
-    strcat_s(cmdline, MAX_PATH - strlen(cmdline), argv[a]);
-    strcat_s(cmdline, MAX_PATH - strlen(cmdline), " ");
+    strcat_s(line, MAX_PATH - strlen(line), argv[a]);
+    strcat_s(line, MAX_PATH - strlen(line), " ");
   }
 
   do {
@@ -114,26 +102,34 @@ int main(int argc, char *argv[])
     if (!exit && fgets(buffer, sizeof(buffer), stdin) != NULL) {
 
       size_t len = terminate(buffer);
-      UNREFERENCED_PARAMETER(len);
 
-      char *token = lex(buffer);
-      expand(cmdline, token);
+      if (len == 0)
+        continue;
 
-      if (strcmp(cmdline, "exit") == 0)
+      *line = 0;
+      char *ctx;
+      char *token = strtok_s(buffer, " \t", &ctx);
+
+      if (strcmp(token, "exit") == 0)
         return 0;
+
+      do {
+        expand(line, token);
+      } while ((token = strtok_s(NULL, " \t", &ctx)) != NULL);
 
     }
 
-    if(!CreateProcess(NULL, cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+
+    if(!CreateProcess(NULL, line, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
 
       exitcode = GetLastError();
 
       switch (exitcode) {
 
         case 2:
-          char *token;
-          char *binary = strtok_s(cmdline, " ", &token);
-          if (binary == NULL) { binary = cmdline; };
+          char *ctx;
+          char *binary = strtok_s(line, " ", &ctx);
+          if (binary == NULL) { binary = line; };
           fprintf(stderr, "%s: %s, not found\n", argv[0], binary);
           break;
 
