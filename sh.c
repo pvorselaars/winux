@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-DWORD exitcode = 0;
+static DWORD exitcode = 0;
 
 void usage(const char *bin)
 {
@@ -28,7 +28,8 @@ size_t terminate(char *buffer)
 void expand(char *line, char *token)
 {
   if (*token != '$') {
-    sprintf_s(line, MAX_PATH - strlen(line), "%s %s", line, token);
+    strcat_s(line, MAX_PATH - strlen(line), token);
+    strcat_s(line, MAX_PATH - strlen(line), " ");
     return;
   }
 
@@ -106,12 +107,40 @@ int main(int argc, char *argv[])
       if (len == 0)
         continue;
 
-      *line = 0;
       char *ctx;
       char *token = strtok_s(buffer, " \t", &ctx);
 
       if (strcmp(token, "exit") == 0)
         return 0;
+
+      if (strcmp(token, "cd") == 0) {
+        token = strtok_s(NULL, " \t", &ctx);
+
+        if (token != NULL) {
+
+          if (!SetCurrentDirectory(token)) {
+
+            int e = GetLastError();
+            switch (e)
+            {
+              case 2:
+                fprintf(stderr, "%s: %s, no such directory\n", argv[0], token);
+                break;
+
+              default:
+                fprintf(stderr, "%s: unable to change directory (%d)\n", argv[0], e);
+                break;
+            }
+
+          }
+
+        }
+
+        continue;
+
+      }
+
+      *line = 0;
 
       do {
         expand(line, token);
@@ -119,8 +148,7 @@ int main(int argc, char *argv[])
 
     }
 
-
-    if(!CreateProcess(NULL, line, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+    if(*line != 0 && !CreateProcess(NULL, line, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
 
       exitcode = GetLastError();
 
