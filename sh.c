@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+DWORD exitcode = 0;
+
 void usage(const char *bin)
 {
     printf("Usage: %s [-|/h] [-|/c FILE [ARGS]]\n"
@@ -14,6 +16,45 @@ void usage(const char *bin)
            "Note: -|/ means both - and / can be used to specificy arguments (e.g. /h or -h)\n", bin, bin);
 }
 
+size_t terminate(char *buffer)
+{
+    size_t len = strlen(buffer);
+    if (len > 0 && buffer[len-1] == '\n')
+      buffer[--len] = 0;
+
+    return len;
+}
+
+char *lex(char *line)
+{
+  char *token = line;
+
+  while(*line++ != ' ');
+
+  *line = 0;
+
+  return token;
+}
+
+void expand(char *line, char *token)
+{
+  if (*token != '$') {
+      sprintf_s(line, MAX_PATH - strlen(line), "%s%s", line, token);
+      return;
+  }
+
+  if (*(++token) == '?') {
+    sprintf_s(line, MAX_PATH - strlen(line), "%s%d", line, exitcode);
+    return;
+  }
+
+  if(GetEnvironmentVariableA(token, line, MAX_PATH - (DWORD)strlen(line)))
+    return;
+
+  line[0] = 0;
+
+}
+
 int main(int argc, char *argv[])
 {
   int cmd = 1;
@@ -23,7 +64,6 @@ int main(int argc, char *argv[])
 
   STARTUPINFO si;
   PROCESS_INFORMATION pi;
-  DWORD exitcode = 0;
 
   if (argc > 1) {
 
@@ -73,34 +113,11 @@ int main(int argc, char *argv[])
 
     if (!exit && fgets(buffer, sizeof(buffer), stdin) != NULL) {
 
-      size_t len = strlen(buffer);
-      if (len > 0 && buffer[len-1] == '\n')
-        buffer[--len] = 0;
+      size_t len = terminate(buffer);
+      UNREFERENCED_PARAMETER(len);
 
-      int c = 0;
-      for (int b = 0; b < len; b++) {
-        if (buffer[b] == '$') {
-          b++;
-          if (buffer[b] == '?') {
-            sprintf_s(&cmdline[c], MAX_PATH - c, "%d", exitcode);
-            continue;
-          }
-
-          int v = b;
-          while (buffer[v] != 0 || buffer[v] == ' '){ v++; };
-          buffer[v] = 0;
-
-          c += GetEnvironmentVariableA(&buffer[b], &cmdline[c], MAX_PATH - c);
-          b += v + 1;
-
-        } else {
-          cmdline[c] = buffer[b];
-          c++;
-        }
-
-      }
-
-      cmdline[c] = 0;
+      char *token = lex(buffer);
+      expand(cmdline, token);
 
       if (strcmp(cmdline, "exit") == 0)
         return 0;
