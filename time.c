@@ -48,15 +48,14 @@ int main(int argc, char *argv[])
   if(!GetProcessTimes(pi.hProcess, &created, &exit, &sys, &user))
     return GetLastError();
 
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+
   FileTimeToSystemTime(&created, &created_t);
   FileTimeToSystemTime(&exit, &exit_t);
   FileTimeToSystemTime(&sys, &sys_t);
   FileTimeToSystemTime(&user, &user_t);
 
-  wall_t.wYear          = exit_t.wYear - created_t.wYear;
-  wall_t.wMonth         = exit_t.wMonth - created_t.wMonth;
-  wall_t.wDayOfWeek     = exit_t.wDayOfWeek;
-  wall_t.wDay           = exit_t.wDay - created_t.wDay;
   wall_t.wHour          = exit_t.wHour - created_t.wHour;
   wall_t.wMinute        = exit_t.wMinute - created_t.wMinute;
   wall_t.wSecond        = exit_t.wSecond - created_t.wSecond;
@@ -65,9 +64,6 @@ int main(int argc, char *argv[])
   printf("real: %dh %dm %02ds %03dms\n", wall_t.wHour, wall_t.wMinute, wall_t.wSecond, wall_t.wMilliseconds);
   printf("user: %dh %dm %02ds %03dms\n", sys_t.wHour, sys_t.wMinute, sys_t.wSecond, sys_t.wMilliseconds);
   printf("sys:  %dh %dm %02ds %03dms\n", user_t.wHour, user_t.wMinute, user_t.wSecond, user_t.wMilliseconds);
-
-  CloseHandle(pi.hProcess);
-  CloseHandle(pi.hThread);
 
   return 0;
 }
