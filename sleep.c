@@ -7,7 +7,7 @@ void usage(const char* bin) {
 
   printf("Usage: %s SEC\n"
          "\n"
-         "\t Sleep for SEC seconds and exit.\n", bin);
+         "Sleep for SEC seconds and exit.\n", bin);
 
 }
 
