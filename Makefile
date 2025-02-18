@@ -9,6 +9,7 @@ LDFLAGS = /nologo
 all: $(BIN)
 
 debug: CFLAGS += /Z7
+debug: LDFLAGS += /DEBUG
 debug: all
 
 %.exe: %.obj
