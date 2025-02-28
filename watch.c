@@ -16,9 +16,8 @@ int main(int argc, char *argv[])
     strcpy_s(shell, MAX_PATH, "C:\\Windows\\System32\\cmd.exe");
   }
 
-  char *cmd = NULL;
   char cmdline[MAX_PATH];
-  int spacing, timelength, datelength, cmdlength, digits = 1;
+  int timelength, datelength, digits = 1;
   bool timestamp = true;
   bool quiet = false;
 
@@ -29,8 +28,6 @@ int main(int argc, char *argv[])
   SYSTEMTIME t;
   wchar_t date[DATE_LENGTH];
   wchar_t time[TIME_LENGTH];
-
-  CONSOLE_SCREEN_BUFFER_INFO b;
 
   if (argc < 2) {
     printf("Usage: %s [-n SEC] [-t] [-q] PROG\n"
@@ -44,10 +41,12 @@ int main(int argc, char *argv[])
     return ERROR_SUCCESS;
   }
 
+  strcat_s(cmdline, MAX_PATH, "/c ");
+
   for (int a = 1; a < argc; a++) {
 
     // process options
-    if (argv[a][0] == '-') {
+    if (argv[a][0] == '-' && strlen(cmdline) < 4) {
 
       switch (argv[a][1]) {
 
@@ -76,38 +75,30 @@ int main(int argc, char *argv[])
 
     }
 
-    if (cmd != NULL)
-      return ERROR_BAD_ARGUMENTS;
-
-    cmd = argv[a];
-
+    strcat_s(cmdline, MAX_PATH - strlen(cmdline), argv[a]);
+    strcat_s(cmdline, MAX_PATH - strlen(cmdline), " ");
   }
 
-  if (cmd == NULL)
-    return ERROR_BAD_ARGUMENTS;
-
-  cmdlength = (int)strlen(cmd);
-  snprintf(cmdline, MAX_PATH, "/c %s", cmd);
-
-  ZeroMemory(&si, sizeof(si));
+  memset(&si, 0, sizeof(si));
   si.cb = sizeof(si);
-  ZeroMemory(&pi, sizeof(pi));
-
-  HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
-  SetConsoleMode(console, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+  memset(&pi, 0, sizeof(pi));
 
   while (1) {
     printf("\033[2J\033[H");
 
     if (timestamp) {
+      printf("Every %ds: %s", sec, &cmdline[3]);
+
       GetLocalTime(&t);
-      datelength = GetDateFormatEx(LOCALE_NAME_USER_DEFAULT, DATE_LONGDATE, &t, NULL, date, DATE_LENGTH, NULL);
-      timelength = GetTimeFormatEx(LOCALE_NAME_INVARIANT, 0, &t, NULL, time, TIME_LENGTH);
+      datelength = GetDateFormatEx(LOCALE_NAME_USER_DEFAULT, DATE_LONGDATE, &t, NULL, date, DATE_LENGTH, NULL) - 1;
+      timelength = GetTimeFormatEx(LOCALE_NAME_INVARIANT, 0, &t, NULL, time, TIME_LENGTH) - 1;
 
-      GetConsoleScreenBufferInfo(console, &b);
-      spacing = b.dwSize.X - digits - cmdlength - timelength - datelength;
+      printf("\033[1000G\033[%dD", datelength+timelength);
+      fputws(time, stdout);
+      fputws(L" ", stdout);
+      fputws(date, stdout);
+      fputws(L"\n\n", stdout);
 
-      printf("Every %ds: %s%*ls %ls\n\n", sec, cmd, spacing, time, date);
     }
 
     if(!CreateProcess(shell, cmdline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
