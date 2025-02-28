@@ -20,12 +20,11 @@ jobs:
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
         run: |
           tar.exe -acf winux-$tag.zip *.exe
-          gh release create "$tag" `
-              --repo="$GITHUB_REPOSITORY" `
-              --title="${tag#v}" `
+          gh release create $env:GITHUB_REF_NAME `
+              --repo=$env:GITHUB_REPOSITORY `
+              --title=$env:GITHUB_REF_NAME `
               --generate-notes `
-              winux-$tag.zip
+              winux-$env:GITHUB_REF_NAME.zip
 
