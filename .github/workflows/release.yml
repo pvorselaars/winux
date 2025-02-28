@@ -21,7 +21,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tar.exe -acf winux-$tag.zip *.exe
+          tar.exe -acf winux-$env:GITHUB_REF_NAME.zip *.exe
           gh release create $env:GITHUB_REF_NAME `
               --repo=$env:GITHUB_REPOSITORY `
               --title=$env:GITHUB_REF_NAME `
